@@ -4,6 +4,7 @@
  *      -Modified code to take advantage of jQuery functions - they're more compact and I find them more intuitive
  *      -Added "new task" entry box next to add-toplevel-task button so users can type task before it gets added to the list
  *      -Changed "completed" checkbox to a toggleable button that turns green when the task is complete
+ *      -Pressing return in new task entry box creates task; pressing return in existing task entry box creates immediate subtask
  */
 
 //useful functions
@@ -33,14 +34,13 @@ var enclosing_task = function enclosing_task(element){
 };
 
   /*
-   * Unchecks the boxes for all of this task's direct ancestors.
-   * @param {HTMLElement} task - The task whose ancestors are to be unchecked.
+   * Unchecks the boxes for all of this element's direct ancestor tasks.
+   * @param {HTMLElement} element - The element whose ancestors are to be unchecked.
    */
-var uncheck_enclosing_tasks = function uncheck_enclosing_tasks(task){
-    while (task !== null){
-        completedParentTask = $(task).children('.btn-success');
-        uncheck_tasks(completedParentTask);
-        task = enclosing_task(task);
+var uncheck_enclosing_tasks = function uncheck_enclosing_tasks(element){
+    while (element !== null){
+        uncheck_tasks($(element).children('.btn-success'));
+        element = enclosing_task(element);
     }
 }
 
@@ -52,11 +52,13 @@ var uncheck_enclosing_tasks = function uncheck_enclosing_tasks(task){
  */
 var uncheck_tasks = function uncheck_task(tasks){
     tasks.removeClass('btn-success');
-    tasks.text('Click when completed');
+    tasks.children('.glyphicon').removeClass('glyphicon-ok');
+    tasks.children('.glyphicon').addClass('glyphicon-unchecked');
 }
 var check_tasks = function check_task(tasks){
     tasks.addClass('btn-success');
-    tasks.text('Task complete!');
+    tasks.children('.glyphicon').removeClass('glyphicon-unchecked');
+    tasks.children('.glyphicon').addClass('glyphicon-ok');
 }
 
 //blank task that can be cloned to create new tasks
@@ -71,7 +73,15 @@ $(document).on('click','.add-toplevel-task',function(event){
     newTask.children('.task-text').val($('.new-task-contents').val())
     $('.toplevel-tasks').append(newTask);
     $('.new-task-contents').val('');
+    newTask.children('.task-completed').tooltip();
 });
+//pressing enter in new-task input should also trigger adding a task
+$('.new-task-contents').keydown(function(event){
+    if (event.keyCode == 13){
+        $('.add-toplevel-task').click();
+    }
+});
+
 
 //DELETE TASK: removes the task it's enclosed by
 $(document).on('click','.delete-task',function(event){
@@ -88,27 +98,39 @@ $(document).on('click','.add-subtask',function(event){
     var newTask = task_template.clone();
     newTask.addClass('subtask');
     $(enclosing_task(event.target)).children('.subtasks').append(newTask);
+    newTask.children('.task-completed').tooltip()
     uncheck_enclosing_tasks(event.target);
+});
+//pressing enter in task input should also create a new subtask of that task
+$(document).on('keydown','.task-text',function(event){
+    if (event.keyCode == 13){
+        $(enclosing_task(event.target)).children('.add-subtask').click();
+    }
 });
 
 //TASK COMPLETED: toggle between complete and incomplete states
 $(document).on('click','.task-completed',function(event){
-    $(event.target).toggleClass('btn-success');
-    if ($(event.target).hasClass('btn-success')){
-        $(event.target).text('Task complete!');
+    //makes sure we're getting the button, not the glyphicon span
+    var toggled = $(event.target).closest('.task-completed');
+    toggled.toggleClass('btn-success');
+    if (toggled.hasClass('btn-success')){
+        toggled.children('.glyphicon').removeClass('glyphicon-unchecked');
+        toggled.children('.glyphicon').addClass('glyphicon-ok');
         //if the task has just been completed, its subtasks must also be complete
-        completedSubtasks = $(enclosing_task(event.target)).find('.task-completed');
+        completedSubtasks = $(enclosing_task(toggled)).find('.task-completed');
         check_tasks(completedSubtasks);
     }
     else{
-        $(event.target).text('Click when completed');
+        toggled.children('.glyphicon').removeClass('glyphicon-ok');
+        toggled.children('.glyphicon').addClass('glyphicon-unchecked');
         //if the task has been marked incomplete, its parent tasks must also be incomplete 
-        uncheck_enclosing_tasks(event.target);
+        uncheck_enclosing_tasks(toggled);
     }
 });
 
 
 $(document).ready(function(){
-    //turn on tooltip for new task button
+    //turn on tooltips
     $('.add-toplevel-task').tooltip();
+    $('.task-completed').tooltip()
 });
