@@ -1,0 +1,16 @@
+body {
+    padding-left: 2cm;
+}
+
+input {
+    display: block;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    width: 100%;
+    background: transparent;
+}
+
+li {
+    text-align: left;
+}
